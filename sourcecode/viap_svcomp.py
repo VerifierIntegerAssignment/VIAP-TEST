@@ -6111,7 +6111,7 @@ def prove_assert_tactic2(axiom,witnessXml):
                                 invariantstmtdisplay=expr2z3_update_postCond(temp_e_assume,{})
                                 
 				print " Try to prove following using induction on "+loop_var
-				print "ForAll("+loop_var+",Implies("+loop_var+">=0,"+loop_var+str(invariantstmtdisplay)+"))"
+				print "ForAll("+loop_var+",Implies("+loop_var+">=0,"+str(invariantstmtdisplay)+"))"
 				print "Base Case"
 				writeLogFile( "j2llogs.logs" , "\nBase Case \n"+str(basecasestmt)+"\n" )
 				status=query2z3(constraint_list,str(basecasestmt),update_vfact,axiom.getInputvariable(),witnessXml)
@@ -6232,7 +6232,7 @@ def prove_assert_tactic2(axiom,witnessXml):
                                 
 				#print inductiveassum
 				print " Try to prove following using induction on "+loop_var
-				print "ForAll("+loop_var+",Implies("+loop_var+">=0,"+loop_var+str(invariantstmtdisplay)+"))"
+				print "ForAll("+loop_var+",Implies("+loop_var+">=0,"+str(invariantstmtdisplay)+"))"
 				print "Base Case"
 				writeLogFile( "j2llogs.logs" , "\nBase Case \n"+str(basecasestmt)+"\n" )
 				status=query2z3(constraint_list,str(basecasestmt),update_vfact,axiom.getInputvariable(),witnessXml)
@@ -13648,7 +13648,7 @@ def modificationOfCondition(statement):
 			if status==True:
 				left_stmt=c_ast.BinaryOp(op='>',left=left_stmt,right=c_ast.Constant(type='int', value='0'))
 			status=False
-			status,right_stmt=modificationOfCondition(statement.left)
+			status,right_stmt=modificationOfCondition(statement.right)
 			if status==True:
 				right_stmt=c_ast.BinaryOp(op='>',left=right_stmt,right=c_ast.Constant(type='int', value='0'))
 			return False,c_ast.BinaryOp(op=statement.op,left=left_stmt, right=right_stmt)
