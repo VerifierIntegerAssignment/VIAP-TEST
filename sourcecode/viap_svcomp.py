@@ -10815,7 +10815,7 @@ def prove_auto(file_name):
 		content=filtered_program.filterSyntax()
 	except SyntaxFilter.SLexerError as e:
                 print 'Error(Find Error in Input File)'
-		print(e)
+		#print(e)
 		return
 	#with open(file_name) as f:
 	#	content = f.read()
