@@ -3103,6 +3103,21 @@ def replaceAddOperator1(expression):
 	return result
 	
 
+#expression='n-1'
+
+def replaceSubOperator(expression):
+	p = regex.compile(r'[A-Za-z|\d|\)][-][A-Za-z|\d|\(]')
+	result=(p.sub(lambda m: m.group().replace("-", " - "), expression))
+	result=replaceSubOperator1(result)
+	return result
+
+def replaceSubOperator1(expression):
+	p = regex.compile(r'[A-Za-z|\d|\s][-][A-Za-z|\d]')
+	result=(p.sub(lambda m: m.group().replace("-", "- "), expression))
+	return result
+
+
+
 
 """
 #Extract arguments from smallest function
@@ -10791,21 +10806,24 @@ def prove_auto(file_name):
 	try:
 		fd = open(file_name)
 		text = "".join(fd.readlines())
+                defineMap={}
+                content,defineMap=preProcessorHandling(text)
 		text=replaceAddOperator(text)
+                text=replaceSubOperator(text)
     		filtered_program = SyntaxFilter.SLexer(text)
 		filtered_program.build()
 		content=filtered_program.filterSyntax()
 	except SyntaxFilter.SLexerError as e:
                 print 'Error(Find Error in Input File)'
-		#print(e)
+		print(e)
 		return
 	#with open(file_name) as f:
 	#	content = f.read()
 	#content=comment_remover_file(content)
 	#content=content.replace('\r','')
+
 	
-	defineMap={}
-	content,defineMap=preProcessorHandling(content)
+	#content,defineMap=preProcessorHandling(content)
 	text = r""" """+content
 	parser = GnuCParser()
 	#ast = parse_file(file_name, use_cpp=True)
@@ -11636,6 +11654,7 @@ def translate2IM(file_name):
 	content=content.replace('\r','')
 	defineMap={}
 	content,defineMap=preProcessorHandling(content)
+        
 	text = r""" """+content
 	parser = c_parser.CParser()
 	#ast = parse_file(file_name, use_cpp=True)
