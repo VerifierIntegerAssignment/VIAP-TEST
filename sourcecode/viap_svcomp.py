@@ -10927,8 +10927,9 @@ def prove_auto(file_name):
 								variable=variableclass(param_decl.name, param_decl.type.type.names[0],None,None,None,structType)
 			    				parametermap[param_decl.name]=variable
     				if function_decl.name in functionvarmap.keys():
-					membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None)
-					functionvarmap[function_decl.name]=membermethod
+                                        if function_decl.name!='__VERIFIER_assert':
+                                            membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None)
+                                            functionvarmap[function_decl.name]=membermethod
 				else:
 					if function_decl.type.args is not None:
 						for param_decl in function_decl.type.args.params:
@@ -10948,8 +10949,9 @@ def prove_auto(file_name):
 								else:	
 									variable=variableclass(param_decl.name, param_decl.type.type.names[0],None,None,None,structType)
 								parametermap[param_decl.name]=variable
-					membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None)
-					functionvarmap[membermethod.getMethodname()]=membermethod
+                                        if function_decl.name!='__VERIFIER_assert':
+                                            membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None)
+                                            functionvarmap[membermethod.getMethodname()]=membermethod
 
     	
     	for medthod in functionvarmap.keys():
