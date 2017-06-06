@@ -17924,11 +17924,21 @@ def getAssertAssume(f,o,a,cm):
                                 new_e1[3]=expr_replace(new_e1[3],var_e1,var_array)
                                 new_e1[4]=expr_replace(new_e1[4],var_e1,var_array)
                                 new_e1[4]=simplify_ind_equation(new_e1[4],map_var.keys())
-                                #print '##########'
+                                #print '##########1'
+                                #print expr2string1(new_e1[3])
+                                #print '##########2'
                                 #print expr2string1(new_e1[4])
-                                #print '##########'
+                                #print '##########3'
                                 update_new_a.append(new_e1)
+                            #print '@@@@@@@@@@@@@@@'
+                            #print x[4]
                             x[4]=x[4][3]
+                            x[4]=getEndElse(x[4])
+                            #print '@@@@@@@@@@@@@@@'
+                            #print x[4]
+                            #print '@@@@@@@@@@@@@@@'
+                            #print expr2string1(x[4])
+                            #print '@@@@@@@@@@@@@@@'
                             update_new_a.append(x)
                         else:
                             update_new_a.append(x)
@@ -17943,6 +17953,9 @@ def getAssertAssume(f,o,a,cm):
         	if x[0]=='i1':
         		if x[3][0].find('array')>0:
         			if '_PROVE' in expr2string1(x[4]):
+                                        #print '##########'
+                                        #print expr2string1(x[4])
+                                        #print '##########'
                                         #new_word,const_var=getPrimeAssert(a,cm,x[2],cm[x[2]])
                                         new_word,const_var=getPrimeAssert(update_new_a,cm,x[2],cm[x[2]])
 
@@ -18027,6 +18040,9 @@ def getAssertAssume(f,o,a,cm):
       	        	
         return new_f,new_o,new_a,extractAssert(assert_list,cm),extractAssume(assume_list,cm)
         
+
+
+
 
 def getPrimeAssert(a,cm,var,constant):
     pime_eq=None
@@ -18159,6 +18175,19 @@ def assert_filter1(e):
                 new_stmt.append(new_cond)
                 new_stmt.append(new_cond1)
                 return new_stmt
+
+def getEndElse(e):
+    if e[:1]==['ite']:
+        arg_list=expr_args(e)
+        if arg_list[2][:1]==['ite']:
+            return getEndElse(arg_list[2])
+        else:
+            return arg_list[2]
+    else:
+        return e
+
+
+
             
 
 def getAll_PROVE_ASSUME(e,map_var):
