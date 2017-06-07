@@ -1019,7 +1019,7 @@ def expr2varlist(e,variable_list):
 def expr_func(e,v): #e - expr
     ret = []
     f = expr_op(e)
-    if is_program_var(f,v):
+    if is_program_var(f,v) or '__VERIFIER_nondet_int' in f:
         ret.append(f)
     for e1 in expr_args(e):
         ret = ret + expr_func(e1,v)
