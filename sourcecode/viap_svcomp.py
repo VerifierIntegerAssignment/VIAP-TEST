@@ -290,9 +290,10 @@ def expr2stringvfact(e,var_map):
 
 
 
-def expr2stringvfact2(e,var_map,allvariablelist):
+def expr2stringvfact2(e,var_map,allvariablelist,constraints):
     args=expr_args(e)
     op=expr_op(e)
+    constraint=None
     if len(args)==0:
     	if op not in var_map.keys() and is_number(op)==False and is_hex(op)==None and op not in _base:
     		element=[]
@@ -308,24 +309,34 @@ def expr2stringvfact2(e,var_map,allvariablelist):
         			element_para.append('array')
         		else:
         			if typename=='unsigned':
+                                        constraint=e
         				element_para.append('int')
         			else:
         				element_para.append(typename)
-        		
-        	var_map[op]=element 
+        	var_map[op]=element
+                if constraint is not None or '__VERIFIER_nondet_uint' in op:
+                    con_equ=[]
+                    con_equ.append('c1')
+                    con_equ1=[]
+                    con_equ1.append('>=')
+                    con_equ1.append(e)
+                    con_equ1.append(eval("['0']"))
+                    con_equ.append(con_equ1)
+                    constraints.append(wff2z3_update_postCond(con_equ))
+                constraint=None  
         return op
     else:
         if op=='and' or op=='or':
             if len(args)==1:
-                return expr2stringvfact2(args[0],var_map,allvariablelist)
+                return expr2stringvfact2(args[0],var_map,allvariablelist,constraints)
             else:
-                return '('+(' '+op+' ').join(list(expr2stringvfact2(x,var_map,allvariablelist) for x in args))+')'
+                return '('+(' '+op+' ').join(list(expr2stringvfact2(x,var_map,allvariablelist,constraints) for x in args))+')'
         elif op=='not' and len(args)==1:
-            return 'not '+expr2stringvfact2(args[0],var_map,allvariablelist)
+            return 'not '+expr2stringvfact2(args[0],var_map,allvariablelist,constraints)
         elif op=='implies' and len(args)==2:
-            return expr2stringvfact2(args[0],var_map,allvariablelist)+ ' -> '+expr2stringvfact2(args[1],var_map,allvariablelist)
+            return expr2stringvfact2(args[0],var_map,allvariablelist,constraints)+ ' -> '+expr2stringvfact2(args[1],var_map,allvariablelist,constraints)
         elif op in _infix_op and len(args)==2:
-            return '(' + expr2stringvfact2(args[0],var_map,allvariablelist)+ op+expr2stringvfact2(args[1],var_map,allvariablelist)+')'
+            return '(' + expr2stringvfact2(args[0],var_map,allvariablelist,constraints)+ op+expr2stringvfact2(args[1],var_map,allvariablelist,constraints)+')'
         else:
             if isArrayFunction(op)==True:
             	count=0
@@ -338,7 +349,7 @@ def expr2stringvfact2(e,var_map,allvariablelist):
             		if count==0:
             			element_para.append('array')
             			element_in=[]
-            			para_value=expr2stringvfact2(parameter,var_map,allvariablelist)
+            			para_value=expr2stringvfact2(parameter,var_map,allvariablelist,constraints)
             			element_in.append(para_value)
             			element_in.append(0)
             			element_para_in=[]
@@ -347,7 +358,7 @@ def expr2stringvfact2(e,var_map,allvariablelist):
             			var_map[para_value]=element_in
             			array_type=getVariableType(parameter,allvariablelist)
             		else:
-            			expr2stringvfact2(parameter,var_map,allvariablelist)
+            			expr2stringvfact2(parameter,var_map,allvariablelist,constraints)
             			typename=getVariableType(parameter,allvariablelist)
             			if typename is None:
             				element_para.append('int')
@@ -361,11 +372,22 @@ def expr2stringvfact2(e,var_map,allvariablelist):
 			element_para.append('int')
 		else:
             		if typename=='unsigned':
+                                constraint=e
             			element_para.append('int')
             		else:
             			element_para.append(array_type)
             	element.append(element_para)
             	var_map[op]=element
+                if constraint is not None or '__VERIFIER_nondet_uint' in op:
+                    con_equ=[]
+                    con_equ.append('c1')
+                    con_equ1=[]
+                    con_equ1.append('>=')
+                    con_equ1.append(e)
+                    con_equ1.append(eval("['0']"))
+                    con_equ.append(con_equ1)
+                    constraints.append(wff2z3_update_postCond(con_equ))
+                constraint=None  
             else:
             	if op not in var_map.keys() and op is not 'ite' and op not in _base:
             		element=[]
@@ -374,7 +396,7 @@ def expr2stringvfact2(e,var_map,allvariablelist):
             		element_para=[]
             		if len(args)>0:
             			for x in args:
-            				typename=getVariableType(expr2stringvfact2(x,var_map,allvariablelist),allvariablelist)
+            				typename=getVariableType(expr2stringvfact2(x,var_map,allvariablelist,constraints),allvariablelist)
             				if typename is None:
             					element_para.append('int')
             				else:
@@ -384,6 +406,7 @@ def expr2stringvfact2(e,var_map,allvariablelist):
 			        	element_para.append('int')
 			        else:
             				if typename=='unsigned':
+                                                constraint=e
             					element_para.append('int')
             				else:
             					element_para.append(typename)
@@ -393,12 +416,23 @@ def expr2stringvfact2(e,var_map,allvariablelist):
             				element_para.append('int')
             			else:
             				if typename=='unsigned':
+                                                constraint=e
             					element_para.append('int')
             				else:
             					element_para.append(typename)
             		element.append(element_para)
-            		var_map[op]=element            	            			
-            return op +'('+ ','.join(list(expr2stringvfact2(x,var_map,allvariablelist) for x in args))+ ')'
+            		var_map[op]=element
+                        if constraint is not None or '__VERIFIER_nondet_uint' in op:
+                            con_equ=[]
+                            con_equ.append('c1')
+                            con_equ1=[]
+                            con_equ1.append('>=')
+                            con_equ1.append(e)
+                            con_equ1.append(eval("['0']"))
+                            con_equ.append(con_equ1)
+                            constraints.append(wff2z3_update_postCond(con_equ))
+                        constraint=None           	            			
+            return op +'('+ ','.join(list(expr2stringvfact2(x,var_map,allvariablelist,constraints) for x in args))+ ')'
 
 
 #normal infix printing
@@ -643,7 +677,7 @@ def expr2python(e,tab):
 
 def getVariableType(variable,allvariablelist):
 	for var in allvariablelist.keys():
-		if var in variable:
+		if var in variable and variable[0] is not '_':
 			variableType=allvariablelist[var]
 			return variableType.getVariableType()
 	return None
@@ -1019,7 +1053,7 @@ def expr2varlist(e,variable_list):
 def expr_func(e,v): #e - expr
     ret = []
     f = expr_op(e)
-    if is_program_var(f,v) or '__VERIFIER_nondet_int' in f:
+    if is_program_var(f,v) or '__VERIFIER_nondet' in f:
         ret.append(f)
     for e1 in expr_args(e):
         ret = ret + expr_func(e1,v)
@@ -1207,15 +1241,36 @@ def wff2stringvfact(w,var_map):
 
 
 #print in normal infix notation
-def wff2stringvfact2(w,var_map,allvariablelist):
+def wff2stringvfact2(w,var_map,allvariablelist,constraints):
         if w[0] == 'e' or w[0] == 'i0' or w[0] == 'i1':
-            return expr2stringvfact2(w[-2],var_map,allvariablelist)+' = '+ expr2stringvfact2(w[-1],var_map,allvariablelist)
+            return expr2stringvfact2(w[-2],var_map,allvariablelist,constraints)+' = '+ expr2stringvfact2(w[-1],var_map,allvariablelist,constraints)
         elif w[0] == 'd0':
-            return expr2stringvfact2(w[1],var_map,allvariablelist)+'=0 <=> '+ expr2stringvfact2(w[2],var_map,allvariablelist)
+            return expr2stringvfact2(w[1],var_map,allvariablelist,constraints)+'=0 <=> '+ expr2stringvfact2(w[2],var_map,allvariablelist,constraints)
         elif w[0] == 'd1':
-            return expr2stringvfact2(w[2],var_map,allvariablelist)+'='+w[1]+'+1 <=> '+expr2stringvfact2(w[3],var_map,allvariablelist)
+            return expr2stringvfact2(w[2],var_map,allvariablelist,constraints)+'='+w[1]+'+1 <=> '+expr2stringvfact2(w[3],var_map,allvariablelist,constraints)
         elif w[0]=='a' or w[0]=='s0' or w[0]=='s1' or w[0]=='c1':
-            return expr2stringvfact2(w[1],var_map,allvariablelist)
+            return expr2stringvfact2(w[1],var_map,allvariablelist,constraints)
+
+
+def getConstraints_Eq(w,allvariablelist,constraints):
+    if w[0] == 'i1':
+        temp_eq=copy.deepcopy(w[3])
+        temp_eq=expr_replace(temp_eq,eval("['+',['"+w[2]+"'],['1']]"),eval("['"+w[2]+"']"))
+        if isArrayFunction(w[3][0])==False:
+            typename=getVariableType(w[3][0],allvariablelist)
+            if typename=='unsigned':
+                con_equ=[]
+                con_equ.append('c1')
+                con_equ1=[]
+                con_equ1.append('>=')
+                con_equ1.append(temp_eq)
+                con_equ1.append(eval("['0']"))
+                con_equ.append(con_equ1)
+                return wff2z3_update_postCond(con_equ)
+    return None
+
+    
+
 
 
 
@@ -2060,6 +2115,7 @@ def translate1(p,v,flag):
         cm_map={}
         assert_list_map={}
         assume_list_map={}
+        assert_key_map={}
         res = translate0(p,v,flag)
         for fn in res:
             x,f,o,a,l = res[fn]
@@ -2068,7 +2124,8 @@ def translate1(p,v,flag):
             #print a
             #print '--------------------'
             print('Output for '+fn+':')
-            f,o,a,cm = rec_solver(f,o,a)          
+            f,o,a,cm = rec_solver(f,o,a)
+            #cm=[]          
             #print f
             #print o
             #print a
@@ -2078,13 +2135,15 @@ def translate1(p,v,flag):
             #f,o,a,cm = update__VERIFIER_nondet(f,o,a,cm)
             
     
-            f,o,a,assert_list,assume_list=getAssertAssume(f,o,a,cm)
+            f,o,a,assert_list,assume_list,assert_key=getAssertAssume(f,o,a,cm)
             
             #assert_list=[]
             
             #assume_list=[]
             
-
+            
+            #assert_key_map={}
+            
             f_map[fn]=f
 	    o_map[fn]=o
 	    a_map[fn]=a
@@ -2092,6 +2151,7 @@ def translate1(p,v,flag):
             
             assert_list_map[fn]=assert_list
             assume_list_map[fn]=assume_list
+            assert_key_map[fn]=assert_key
             
             f,o,a=organizeOutput(f,o,a,v)
             
@@ -2110,7 +2170,7 @@ def translate1(p,v,flag):
                 else:
                 	if x[0]!='i0':
                     		print wff2string1(x)
-        return f_map,o_map,a_map,cm_map,assert_list_map,assume_list_map
+        return f_map,o_map,a_map,cm_map,assert_list_map,assume_list_map,assert_key_map
         
     elif p[1]=='fun':
         fn,f,o,a,l = translate0(p,v,flag)
@@ -2118,7 +2178,7 @@ def translate1(p,v,flag):
         print(fn)
         f,o,a,cm = rec_solver(f,o,a)
         f,o,a,cm = getDummyFunction(f,o,a,cm)
-        f,o,a,assert_list,assume_list=getAssertAssume(f,o,a,cm)
+        f,o,a,assert_list,assume_list,assert_key=getAssertAssume(f,o,a,cm)
         f,o,a=organizeOutput(f,o,a,v)
         output_axioms_fn(f,o,a)
     	print('\n4. Assumption :')
@@ -2135,13 +2195,13 @@ def translate1(p,v,flag):
                 else:
                 	if x[0]!='i0':
                     		print wff2string1(x)
-        return f,o,a,cm,assert_list,assume_list
+        return f,o,a,cm,assert_list,assume_list,assert_key
     else:
         f,o,a,l = translate0(p,v,flag)
         #Add by Pritom Rajkhowa 10 June 2016
     	f,o,a,cm = rec_solver(f,o,a)
     	f,o,a,cm = getDummyFunction(f,o,a,cm)
-    	f,o,a,assert_list,assume_list=getAssertAssume(f,o,a,cm)
+    	f,o,a,assert_list,assume_list,assert_key=getAssertAssume(f,o,a,cm)
         f,o,a=organizeOutput(f,o,a,v)
     	output_axioms_fn(f,o,a)
     	print('\n4. Assumption :')
@@ -2159,7 +2219,7 @@ def translate1(p,v,flag):
                 	if x[0]!='i0':
                     		print wff2string1(x)
     
-    	return f,o,a,cm,assert_list,assume_list
+    	return f,o,a,cm,assert_list,assume_list,assert_key
 
 
 
@@ -2196,10 +2256,10 @@ def organizeOutput(f,o,a,vfacts):
             for info in info_list:
                 element_list=info_list[info]
                 if type(element_list) is list:
-                    if element_list[1]=='array' and '_PROVE' not in info and '_ASSUME' not in info:
+                    if element_list[1]=='array' and '_PROVE' not in info and '_ASSUME' not in info and len(element_list)==2:
                         array_list.append(info)
         else:
-            if info_list[1]=='array' and '_PROVE' not in vfact and '_ASSUME' not in vfact:
+            if info_list[1]=='array' and '_PROVE' not in vfact and '_ASSUME' not in vfact and len(element_list)==2:
                 array_list.append(vfact)
     
     
@@ -2520,7 +2580,6 @@ def translateWhile(p,v,flag): #p=[l, 'while', c, b]
                         out_axioms00[y]=ax1[:2]+[expr_sub_dict(ax1[2],{expr_op(res[3]):res[4]})]
         if not found1:
             found_solution=False
-
     for x in out_axioms00:
         ax = out_axioms00[x] #ax = ['e',e1,e2]
         e1=extend(ax[1],expres('+',[loop_var,['1']]),frame_axioms,v)
@@ -3103,21 +3162,6 @@ def replaceAddOperator1(expression):
 	return result
 	
 
-#expression='n-1'
-
-def replaceSubOperator(expression):
-	p = regex.compile(r'[A-Za-z|\d|\)][-][A-Za-z|\d|\(]')
-	result=(p.sub(lambda m: m.group().replace("-", " - "), expression))
-	result=replaceSubOperator1(result)
-	return result
-
-def replaceSubOperator1(expression):
-	p = regex.compile(r'[A-Za-z|\d|\s][-][A-Za-z|\d]')
-	result=(p.sub(lambda m: m.group().replace("-", "- "), expression))
-	return result
-
-
-
 
 """
 #Extract arguments from smallest function
@@ -3511,14 +3555,14 @@ def getVariFunDetails(f,o,a,variableMapIp,variableMapOp):
 
 #Collect all Function and Variable defination for Translation 2
 
-def getVariFunDetails2(f,o,a,allvariablelist):
+def getVariFunDetails2(f,o,a,allvariablelist,constraints):
 	var_map={}
 	for x in f:
-            wff2stringvfact2(f[x],var_map,allvariablelist)
+            wff2stringvfact2(f[x],var_map,allvariablelist,constraints)
 	for x in o:
-            wff2stringvfact2(o[x],var_map,allvariablelist)
+            wff2stringvfact2(o[x],var_map,allvariablelist,constraints)
         for x in a:
-            wff2stringvfact2(x,var_map,allvariablelist)
+            wff2stringvfact2(x,var_map,allvariablelist,constraints)
         return var_map
 
 
@@ -3918,6 +3962,7 @@ def solve_rec(e1,e2):
 				tree = p.parse_expression(expression)
 				closed_form_soln=construct_expression(tree,e1[1],e1[2])
 			
+	#return None
 	return closed_form_soln
 
 
@@ -4217,7 +4262,7 @@ class sortclass(object):
 #Plain Python object to store Information about Member Method of a Java Class 
 """
 class membermethodclass(object):
- 	def __init__(self, methodname, returnType , inputvar, localvar, body, usedCounter, serialNo,tempoary):
+ 	def __init__(self, methodname, returnType , inputvar, localvar, body, usedCounter, serialNo,tempoary, analysis_module, fun_decl):
         	self.methodname = methodname
         	self.inputvar = inputvar
         	self.returnType = returnType
@@ -4226,6 +4271,8 @@ class membermethodclass(object):
         	self.usedCounter = usedCounter
         	self.serialNo = serialNo
         	self.tempoary = tempoary
+                self.analysis_module = analysis_module
+                self.fun_decl = fun_decl
         def getMethodname(self):
         	return self.methodname
         def getreturnType(self):
@@ -4242,6 +4289,10 @@ class membermethodclass(object):
 		return self.serialNo
 	def getTempoary(self):
 		return self.tempoary
+	def getFun_decl(self):
+		return self.fun_decl
+	def getAnalysis_module(self):
+		return self.analysis_module
 	def setInputvar(self, inputvar):
 	        self.inputvar=inputvar
 	def setLocalvar(self, localvar):
@@ -4254,6 +4305,10 @@ class membermethodclass(object):
 		self.serialNo=serialNo
 	def setTempoary(self,tempoary):
 		self.tempoary=tempoary
+	def setAnalysis_module(self,analysis_module):
+		self.analysis_module=analysis_module
+	def setFun_decl(self,fun_decl):
+		self.fun_decl=fun_decl
 """
 
 #Variable Class 
@@ -10414,7 +10469,6 @@ def programTransformation(function_body,functionMap):
     statements=functionToAssignment(update_statements,functionMap)
     
     
-    statements=change_var_name(statements)
     
     
     #print '#######11'
@@ -10433,6 +10487,8 @@ def programTransformation(function_body,functionMap):
     #count__VERIFIER_nondet=0
     
     update_statements=getVariablesInit(update_statements)
+    
+    update_statements=change_var_name(update_statements)
 
     return update_statements
 
@@ -10803,13 +10859,13 @@ def prove_auto(file_name):
         new_variable_array={}
         counter_variableMap={}
         counter_variableMap_Conf={}
+        program_analysis=''
 	try:
 		fd = open(file_name)
 		text = "".join(fd.readlines())
                 defineMap={}
                 content,defineMap=preProcessorHandling(text)
 		text=replaceAddOperator(text)
-                text=replaceSubOperator(text)
     		filtered_program = SyntaxFilter.SLexer(text)
 		filtered_program.build()
 		content=filtered_program.filterSyntax()
@@ -10821,8 +10877,8 @@ def prove_auto(file_name):
 	#	content = f.read()
 	#content=comment_remover_file(content)
 	#content=content.replace('\r','')
-
 	
+	#defineMap={}
 	#content,defineMap=preProcessorHandling(content)
 	text = r""" """+content
 	parser = GnuCParser()
@@ -10852,6 +10908,7 @@ def prove_auto(file_name):
 	
     	counter=0        
     	for e in ast.ext:
+                
     		if type(e) is c_ast.Decl:
     			if type(e.type) is c_ast.FuncDecl:
     				parametermap={}
@@ -10873,10 +10930,11 @@ def prove_auto(file_name):
 								variable=variableclass(param_decl.name, param_decl.type.type.names[0],None,None,None,structType)
         						parametermap[param_decl.name]=variable
 
-				membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,None,None,0,0,None)
+				membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,None,None,0,0,None,None,None)
 				functionvarmap[membermethod.getMethodname()]=membermethod
 
     			elif type(e.type) is c_ast.TypeDecl:
+                                #e.type.show()
             			var_type=None
             			initial_value=None
             			structType=None
@@ -10884,11 +10942,12 @@ def prove_auto(file_name):
                 			if type(child[1].type) is c_ast.IdentifierType:
                     				var_type=child[1].type.names[0]
 					else:
+                    				
                     				initial_value=child[1].value
             			variable=variableclass(e.name, var_type,None,None,initial_value,structType)
             			externalvarmap[e.name]=variable
     		else:
-    			if type(e) is c_ast.FuncDef:                               
+    			if type(e) is c_ast.FuncDef:                          
     				parametermap={}
     				new_e,pointer_list,array_list=pointerHandlingParameter(e)
 				if new_e is None:
@@ -10896,10 +10955,11 @@ def prove_auto(file_name):
 				else:
 					function_decl=new_e
     				
-    				
     				function_decl=e.decl
+                                
     				function_body = e.body
     				function_body=pointerHandlingDecl(function_body,pointer_list,array_list)
+                                
     				statements=function_body.block_items
     				statements=change_var_name(statements)
     				function_body= c_ast.Compound(block_items=statements)
@@ -10927,8 +10987,8 @@ def prove_auto(file_name):
 								variable=variableclass(param_decl.name, param_decl.type.type.names[0],None,None,None,structType)
 			    				parametermap[param_decl.name]=variable
     				if function_decl.name in functionvarmap.keys():
-                                        if function_decl.name!='__VERIFIER_assert':
-                                            membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None)
+					if function_decl.name!='__VERIFIER_assert':
+                                            membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None,function_decl)
                                             functionvarmap[function_decl.name]=membermethod
 				else:
 					if function_decl.type.args is not None:
@@ -10949,8 +11009,8 @@ def prove_auto(file_name):
 								else:	
 									variable=variableclass(param_decl.name, param_decl.type.type.names[0],None,None,None,structType)
 								parametermap[param_decl.name]=variable
-                                        if function_decl.name!='__VERIFIER_assert':
-                                            membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None)
+					if function_decl.name!='__VERIFIER_assert':
+                                            membermethod=membermethodclass(function_decl.name,function_decl.type.type.type.names[0],parametermap,localvarmap,function_body,0,counter,None,copy.deepcopy(function_body),function_decl)
                                             functionvarmap[membermethod.getMethodname()]=membermethod
 
     	
@@ -10986,6 +11046,7 @@ def prove_auto(file_name):
     	for medthod in functionvarmap.keys():
     		membermethod=functionvarmap[medthod]
     		body=membermethod.getBody()
+                
     		if body is not None:
     			new_variable={}
     			update_statements=[]
@@ -10998,11 +11059,11 @@ def prove_auto(file_name):
 	    		
 	    		new_variable.clear()
 	    		
-	    		try:
-                            statements=substituteFunBlock(statements,functionvarmap,medthod,externalvarmap)
-                        except:
-                            print 'Error(Subroutine Handling)'
-                            return
+	    		#try:
+                        #    statements=substituteFunBlock(statements,functionvarmap,medthod,externalvarmap)
+                        #except:
+                        #    print 'Error(Subroutine Handling)'
+                        #    return
                         
 	    		
 	    		update_statements=[]
@@ -11080,7 +11141,7 @@ def prove_auto(file_name):
     			
     			try:
                             
-                            program,variablesarray,fname,iputmap,opvariablesarray=translate2IntForm(membermethod.getMethodname(),membermethod.getreturnType(),membermethod.getBody(),membermethod.getInputvar(),membermethod.getTempoary())
+                            program,variablesarray,fname,iputmap,opvariablesarray,module_analysis=translate2IntForm(membermethod.getMethodname(),membermethod.getreturnType(),membermethod.getBody(),membermethod.getInputvar(),membermethod.getTempoary())
                         
                         except Exception as e:
                             print 'Error(error occurred during translation intermediate format)'
@@ -11140,25 +11201,27 @@ def prove_auto(file_name):
                         functionname=functionName
                         
                         witnessXml=getWitness(filename,fname,resultfunction)
-                        witnessXml_map[fname]= witnessXml      	
-      
+                        witnessXml_map[fname]= witnessXml
+                        if program_analysis is not None:
+                            program_analysis=programPrint(membermethod.getFun_decl())+programPrint(module_analysis)+program_analysis
         
         programeIF.append(programe_array)
         
+    
         #print '--------------------------------'
         #print programeIF
         #print '--------------------------------'
         #print variables_list_map
         #print '--------------------------------'
         try:
-            f_map,o_map,a_map,cm_map,assert_map,assume_map=translate1(programeIF,variables_list_map,1)
+            f_map,o_map,a_map,cm_map,assert_map,assume_map,assert_key_map=translate1(programeIF,variables_list_map,1)
         except Exception as e:
             print 'Error(Translation Failed)'
             writeLogFile( "j2llogs.logs" ,str(e))
             return
 
         
-        if type(f_map) is dict and type(o_map) is dict and type(a_map) is dict and type(cm_map) is dict:
+        if type(f_map) is dict and type(o_map) is dict and type(a_map) is dict and type(cm_map) is dict and type(assert_key_map) is dict:
                 for key in f_map.keys():
         		f=f_map[key]
         		o=o_map[key]
@@ -11170,8 +11233,11 @@ def prove_auto(file_name):
         		
         		vfacts,constraints=getVariFunDetails(f,o,a,addition_array[1],addition_array[2])
         		
-        		vfacts2=getVariFunDetails2(f,o,a,addition_array[1])
-                        
+        		vfacts2=getVariFunDetails2(f,o,a,addition_array[1],constraints)
+                        for x in a:
+                            equ=getConstraints_Eq(x,addition_array[1],constraints)
+                            if equ is not None:
+                                constraints.append(equ)
         		vfacts=[]
         		
         		for vfact in vfacts2:
@@ -11184,9 +11250,29 @@ def prove_auto(file_name):
         		f,o,a,vfacts=organizeAxioms(f,o,a,vfacts)
         		axiom=axiomclass(f,o,a,membermethod.getInputvar(), vfacts, constraints,cm,assert_list,assume_list,addition_array[1])
         		axiomeMap[key]=axiom
+                
+                #print '#######'
+                #print program_analysis
+                #print '#######'
+                #return
                 end_time=current_milli_time()
                 print "Translation Time--"
 		print end_time-start_time
+                results=AssetionAnalysis(program_analysis)
+                for fun in assert_key_map.keys():
+                    assert_key_list = assert_key_map[fun]
+                    assert_list=assert_map[fun]
+                    new_assert_key_list=[]
+                    for result in results:
+                        new_assert_list=[]
+                        for key in assert_key_list:
+                            if key in result:
+                                assertion=assert_key_list[key]
+                                print 'Assertion :'+wff2z3_update_postCond(assertion)
+                                print 'Counter Example'
+                                for term in results[result]:
+                                    print term
+                                assert_list.remove(assertion)
                 program=programclass(file_name, memberfunctionmap , externalvarmap, axiomeMap, witnessXml_map) 
                 prove_auto_process(program)
                 #return program
@@ -11242,6 +11328,57 @@ def organizeAxioms(f,o,a,vfacts):
     #            new_a.append(e)
 
     return f,o,a,new_vfacts
+
+
+#Module to Analysis Assertion
+def AssetionAnalysis(program_analysis):
+    map_asserts={}
+    program_analysis="#include <time.h>\n#include <stdlib.h>\n#include <stdio.h>\nunsigned int _count=0;\nint __VERIFIER_nondet_int()\n{\n _count++;\nsrand(_count+(unsigned int)time(NULL));\n srand(rand());\n return rand()%1000;\n}\n"+"\nunsigned int __VERIFIER_nondet_uint()\n{\n _count++;\nsrand(_count+(unsigned int)time(NULL));\n srand(rand());\n return rand()%1000;\n}\n"+program_analysis
+    writtingFile( "input_program.c" , program_analysis )
+    try :
+        #proc = subprocess.Popen('gcc -o input_program input_program.c', stdout=subprocess.PIPE,shell=True)
+        subprocess.call(["gcc", "-o","input_program","input_program.c"])
+        x=0
+        for x in range(0,500):
+            proc = subprocess.Popen('./input_program', stdout=subprocess.PIPE,shell=True)
+            #output = proc.stdout.read()
+            output, err = proc.communicate()
+            status=output
+            if status is not None:
+                outputs_list = status.split('--------\n')
+                assume_output = processOutputAssume(outputs_list)
+                if assume_output is None:
+                    result=processOutput(outputs_list)
+                    if len(result.keys())>0:
+                        for key in result.keys():
+                            map_asserts[key]=result[key]
+        return map_asserts        
+    except OSError  as err:
+        print 'Error Occured'
+
+
+def processOutput(outputs_list):
+    map_asserts={}
+    for output_list in outputs_list:
+        if len(output_list)>1:
+            elements = output_list.split('\n')
+            if '_PROVE' in elements[0] and ':' in elements[0]:
+                element = elements[0].split(':')
+                if int(element[1])==0:
+                    map_asserts[elements[0]]=elements[1:]
+    return map_asserts
+
+    
+def processOutputAssume(outputs_list):
+    for output_list in outputs_list:
+        if len(output_list)>1:
+            elements = output_list.split('\n')
+            if '_ASSUME' in elements[0] and ':' in elements[0]:
+                element = elements[0].split(':')
+                if int(element[1])==0:
+                    return elements[1:]
+    return None    
+
 
 
 
@@ -11656,7 +11793,6 @@ def translate2IM(file_name):
 	content=content.replace('\r','')
 	defineMap={}
 	content,defineMap=preProcessorHandling(content)
-        
 	text = r""" """+content
 	parser = c_parser.CParser()
 	#ast = parse_file(file_name, use_cpp=True)
@@ -11941,8 +12077,13 @@ def translate2IntForm(function_name,function_type,function_body,parametermap,tem
     
     #print(generator.visit(tempory))
     print(generator.visit(function_body))
-
-    membermethod=membermethodclass(function_name,function_type,parametermap,localvarmap,function_body,0,0,tempory)
+    
+    membermethod=membermethodclass(function_name,function_type,parametermap,localvarmap,function_body,0,0,tempory,function_body,None)
+    
+    membermethod.setAnalysis_module(constructProgAssertAnalysis(copy.deepcopy(function_body),localvarmap,membermethod.getInputvar()))
+    
+    
+    
     print "Function Name:"
     print membermethod.getMethodname()
     print "Return Type:"
@@ -12045,8 +12186,10 @@ def translate2IntForm(function_name,function_type,function_body,parametermap,tem
     else:
         str_program=program_dec_start+','+programToinductiveDefination_C(expressions , allvariable)+program_dec_end
     
+    
+    
     program=eval(str_program)
-    return program,variablesarray,membermethod.getMethodname(),membermethod.getInputvar(),opvariablesarray
+    return program,variablesarray,membermethod.getMethodname(),membermethod.getInputvar(),opvariablesarray,membermethod.getAnalysis_module()
 
 
 
@@ -12376,7 +12519,177 @@ def translate_C(file_name):
     return axiom
  
  
- 
+#Construct Program for Assetion Analysis
+
+def constructProgAssertAnalysis(functionbody,localvariables,inputvariables):
+    #arg_list=[]
+    #arg_list.append(c_ast.Constant(type="string", value="\"j:%d\\n\""))
+    #arg_list.append(c_ast.ID(name="j"))
+    #print_function=c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list))
+    functionbody=c_ast.Compound(block_items=addPrintStmt(functionbody.block_items,localvariables,inputvariables))
+    return functionbody
+
+def getAllNodesOfAssetion(statement,map_nodes):
+    if type(statement) is c_ast.BinaryOp:
+        if type(statement.left) is c_ast.BinaryOp:
+            getAllNodesOfAssetion(statement.left,map_nodes)
+        elif type(statement.left) is c_ast.ID:
+            map_nodes.append(statement.left)
+        elif type(statement.left) is c_ast.ArrayRef:
+            map_nodes.append(statement.left)
+        if type(statement.right) is c_ast.BinaryOp:
+            getAllNodesOfAssetion(statement.right,map_nodes)
+        elif type(statement.right) is c_ast.ID:
+            map_nodes.append(statement.right)
+        elif type(statement.right) is c_ast.ArrayRef:
+            map_nodes.append(statement.right)
+    
+
+
+def addPrintStmt(statements,localvariables,inputvariables):
+    update_statements=[]
+    for statement in statements:
+        if type(statement) is c_ast.Assignment:
+            if type(statement.lvalue) is c_ast.ID and '_PROVE' in statement.lvalue.name:
+                update_statements.append(statement)
+                nodes=[]
+                list_variables=[]
+                getAllNodesOfAssetion(statement.rvalue,nodes)
+                update_statements.append(createPrint(statement.lvalue,localvariables,inputvariables))
+                for node in nodes:
+                        if type(node) is c_ast.ID:
+                            list_variables.append(node.name)
+                        update_statements.append(createPrint(node,localvariables,inputvariables))
+                for var in localvariables.keys():
+                    varObject=localvariables[var]
+                    if varObject.getDimensions()==0 or varObject.getDimensions() is None:
+                        if varObject.getVariablename() not in list_variables and '_PROVE' not in varObject.getVariablename() and '_ASSUME' not in varObject.getVariablename():
+                            update_statements.append(createPrint(c_ast.ID(name=varObject.getVariablename()),localvariables,inputvariables))
+                arg_list=[]
+                arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
+                update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))
+            
+            
+            elif type(statement.lvalue) is c_ast.ID and '_ASSUME' in statement.lvalue.name and type(statement.rvalue) is c_ast.BinaryOp:
+                update_statements.append(statement)
+                nodes=[]
+                list_variables=[]
+                getAllNodesOfAssetion(statement.rvalue,nodes)
+                update_statements.append(createPrint(statement.lvalue,localvariables,inputvariables))
+                arg_list=[]
+                arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
+                update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))
+            
+            
+            
+            else:
+                if type(statement.lvalue) is c_ast.ArrayRef and '_PROVE' in getArrayRef_Name(statement.lvalue):
+                    update_statements.append(statement)
+                    nodes=[]
+                    list_variables=[]
+                    getAllNodesOfAssetion(statement.rvalue,nodes)
+                    update_statements.append(createPrint(statement.lvalue,localvariables,inputvariables))
+                    for node in nodes:
+                        if type(node) is c_ast.ID:
+                            list_variables.append(node.name)
+                        update_statements.append(createPrint(node,localvariables,inputvariables))
+                    for var in localvariables.keys():
+                        varObject=localvariables[var]
+                        if varObject.getDimensions()==0 or varObject.getDimensions() is None:
+                            if varObject.getVariablename() not in list_variables and '_PROVE' not in varObject.getVariablename() and '_ASSUME' not in varObject.getVariablename():
+                                update_statements.append(createPrint(c_ast.ID(name=varObject.getVariablename()),localvariables,inputvariables))
+                    arg_list=[]
+                    arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
+                    update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))
+                elif type(statement.lvalue) is c_ast.ArrayRef and '_ASSUME' in getArrayRef_Name(statement.lvalue):
+                    update_statements.append(statement)
+                    nodes=[]
+                    list_variables=[]
+                    getAllNodesOfAssetion(statement.rvalue,nodes)
+                    update_statements.append(createPrint(statement.lvalue,localvariables,inputvariables))
+                    arg_list=[]
+                    arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
+                    update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))
+                        
+                else:
+                    update_statements.append(statement)
+        elif type(statement) is c_ast.While:
+            update_statements.append(c_ast.While(cond=statement.cond, stmt=c_ast.Compound(block_items=addPrintStmt(statement.stmt.block_items,localvariables,inputvariables))))
+        elif type(statement) is c_ast.If:
+            update_statements.append(addPrintStmtIf(statement,localvariables,inputvariables))
+        else:
+            update_statements.append(statement)
+    return update_statements
+
+
+
+def addPrintStmtIf(statement,localvariables,inputvariables):
+    If_stmt=None
+    Else_stmt=None
+    if type(statement) is c_ast.If:
+        if type(statement.iftrue) is c_ast.Compound:
+            new_block_temp=addPrintStmt(statement.iftrue.block_items,localvariables,inputvariables)
+            If_stmt=c_ast.Compound(block_items=new_block_temp)
+        else:
+            If_stmt=statement.iftrue
+    if type(statement.iffalse) is c_ast.Compound:
+        if statement.iffalse.block_items is not None:
+            new_block_temp=addPrintStmt(statement.iffalse.block_items,localvariables,inputvariables)
+            Else_stmt=c_ast.Compound(block_items=new_block_temp)
+        else:
+            Else_stmt=statement.iffalse
+    else:
+        if type(statement.iffalse) is c_ast.If:
+            Else_stmt=addPrintStmtIf(statement.iffalse,localvariables,inputvariables)
+        else:
+            Else_stmt=statement.iffalse
+    return c_ast.If(cond=statement.cond, iftrue=If_stmt, iffalse=Else_stmt)
+
+
+
+def getArrayRef_Name(statement):
+    if type(statement.name) is c_ast.ArrayRef:
+        return getArrayRef_Name(statement.name)
+    else:
+        return statement.name.name
+        
+
+def createPrint(statement,localvariables,inputvariables):
+    generator = c_generator.CGenerator()
+    arg_list=[]
+    mod_operator=None
+    if type(statement) is c_ast.ID:
+        if statement.name in localvariables.keys():
+            mod_operator=localvariables[statement.name].getVariableType()
+        elif statement.name in inputvariables.keys():
+            mod_operator=inputvariables[statement.name].getVariableType()
+    elif type(statement) is c_ast.ArrayRef:
+        array_name=getArrayRef_Name(statement)
+        if array_name in inputvariables.keys():
+            mod_operator=inputvariables[array_name].getVariableType()
+        elif array_name in localvariables.keys():
+            mod_operator=localvariables[array_name].getVariableType()
+    if mod_operator is not None:
+        if mod_operator=='int':
+            mod_operator='%d'
+        elif mod_operator=='float':
+            mod_operator='%f'
+        elif mod_operator=='double':
+            mod_operator='%f'
+        else:
+            mod_operator='%d'
+            
+    else:
+        mod_operator='%d'
+    var_name=str(generator.visit(statement))
+    arg_list.append(c_ast.Constant(type="string", value="\""+var_name+":"+mod_operator+"\\n\""))
+    arg_list.append(statement)
+    print_stmt=c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list))
+    return print_stmt
+
+def programPrint(statement):
+    generator = c_generator.CGenerator()
+    return str(generator.visit(statement))
  
     
 def getArrayDetails(statement,degree):
@@ -12855,7 +13168,6 @@ def programToinductiveDefination_C(expressions, allvariable):
 					programsstart=predicatestmt+programsend
 				else:
 					programsstart+=","+predicatestmt+programsend
-		
 	if programsstart[0]==',':
 		programsstart=programsstart[1:]	
 	return programsstart
@@ -13206,7 +13518,8 @@ def syntaxTranslate(statements):
                 elif type(statement) is c_ast.Switch:
                 	stmts=statement.stmt.block_items
                 	statement=convertToIfElse(stmts,statement.cond)
-                	update_statements.append(statement)
+                	#update_statements.append(statement)
+                        update_statements.append(syntaxTranslateIf(statement))
                 elif type(statement) is c_ast.While:
                 	if type(statement.stmt) is c_ast.Compound:
                 		update_statements.append(c_ast.While(cond=syntaxTranslateStmt(statement.cond),stmt=c_ast.Compound(block_items=syntaxTranslate(statement.stmt.block_items))))
@@ -13363,8 +13676,8 @@ def convertToIfElse(statements,condition):
 		else:
 			update_stmts=[]
 			for stmt in statement.stmts:
-				if type(stmt) is not c_ast.Break:
-					update_stmts.append(stmt)
+				#if type(stmt) is not c_ast.Break:
+                                update_stmts.append(stmt)
 			return c_ast.Compound(block_items=update_stmts)
 		
 
@@ -17276,16 +17589,34 @@ def reconstructPreDefinedFun(statements):
 	global assume_count
 	global assert_count
 	global new_variable
+        global counter_variableMap
+        global counter_variableMap_Conf
+        global array_size_variableMap
+        
+        counter_variableMap={}
+
+        counter_variableMap_Conf={}
+
+        array_size_variableMap={}
+        
 	statements=getPreDefinedFun(statements)
     	update_statements=[]
+        temp_update_statements=[]
     	for var in new_variable.keys():
     		if type(new_variable[var]) is str:
     			temp=c_ast.Decl(name=var, quals=[], storage=[], funcspec=[], type=c_ast.TypeDecl(declname=var, quals=[], type=c_ast.IdentifierType(names=['int'])), init=c_ast.Constant(type='int', value='0'), bitsize=None)
     		else:
     			temp=new_variable[var]
-    		update_statements.append(temp)
+    		temp_update_statements.append(temp)
     	for statement in statements:
-    		update_statements.append(statement)
+            if type(statement) is c_ast.Decl:
+                update_statements.append(statement)
+        for statement in temp_update_statements:
+             update_statements.append(statement)
+        for statement in statements:
+            if type(statement) is not c_ast.Decl:
+                update_statements.append(statement)
+        
     	new_variable={}
     	return update_statements
 
@@ -17294,6 +17625,8 @@ def reconstructPreDefinedFun(statements):
 counter_variableMap={}
 
 counter_variableMap_Conf={}
+
+array_size_variableMap={}
 
 def getPreDefinedFun(statements):
 	update_statements=[]
@@ -17304,6 +17637,7 @@ def getPreDefinedFun(statements):
 	global new_variable
         global counter_variableMap
         global counter_variableMap_Conf
+        global array_size_variableMap
 	for statement in statements:
 		if type(statement) is c_ast.If:
 			stmt=getPreDefinedFunIf(statement)
@@ -17311,13 +17645,24 @@ def getPreDefinedFun(statements):
 				update_statements.append(stmt)
 		elif type(statement) is c_ast.While:
 			local_counter_varMap=getCounterVariables(statement.cond,counter_variableMap)
+
 			getConfirmationVariables(statement.stmt.block_items,counter_variableMap,counter_variableMap_Conf)
+                        
+
+                        getCounterVariablesConst(statement.cond,array_size_variableMap)
+                        
+                        
+                        getArraySizeVar(local_counter_varMap,counter_variableMap_Conf,array_size_variableMap)
+                        
+
 			new_block_items1=getPreDefinedFun(statement.stmt.block_items)
 			for item in local_counter_varMap.keys():
 				if item in counter_variableMap.keys():
 					del counter_variableMap[item]
 				if item in counter_variableMap_Conf.keys():
 					del counter_variableMap_Conf[item]
+                                if item in array_size_variableMap.keys():
+                                        del array_size_variableMap[item]
 			update_statements.append(c_ast.While(cond=statement.cond, stmt=c_ast.Compound(block_items=new_block_items1)))
 		elif type(statement) is c_ast.Label:
 			if statement.name=='ERROR':
@@ -17351,8 +17696,7 @@ def getPreDefinedFun(statements):
 						new_var_name=c_ast.ID(name='_'+str(assert_count)+'_'+'PROVE')
 						if len(counter_variableMap_Conf.keys())>0:
 							new_var_name=create_Assert_Array(new_var_name,counter_variableMap_Conf.keys(),counter_variableMap_Conf)
-
-						
+                                                
 						status,parameter=modificationOfCondition(parameter)
 						if status==True:
 							parameter=c_ast.BinaryOp(op='>',left=parameter,right=c_ast.Constant(type='int', value='0'))
@@ -17361,9 +17705,13 @@ def getPreDefinedFun(statements):
 						#new_variable['_'+str(assert_count)+'_'+'PROVE']='_'+str(assert_count)+'_'+'PROVE'
 						if len(counter_variableMap_Conf.keys())>0:
                                             
-							new_variable['_'+str(assert_count)+'_'+'PROVE']=creatArrayDec('_'+str(assert_count)+'_'+'PROVE',counter_variableMap_Conf.keys())
+							new_variable['_'+str(assert_count)+'_'+'PROVE']=creatArrayDec('_'+str(assert_count)+'_'+'PROVE',array_size_variableMap.keys())
 						else:
 							new_variable['_'+str(assert_count)+'_'+'PROVE']='_'+str(assert_count)+'_'+'PROVE'
+                                                        
+                                                #print '#############@@@@@@@@'
+                                                #print new_variable['_'+str(assert_count)+'_'+'PROVE'].show()
+						#print '#############@@@@@@@@'
 					else:
 						assert_count=assert_count+1
 						
@@ -17371,15 +17719,13 @@ def getPreDefinedFun(statements):
 						if len(counter_variableMap_Conf.keys())>0:
 							new_var_name=create_Assert_Array(new_var_name,counter_variableMap_Conf.keys(),counter_variableMap_Conf)
 
-						
-						
 						status,stmt=modificationOfCondition(parameter)
 						if status==True:
 							parameter=c_ast.BinaryOp(op='>',left=parameter,right=c_ast.Constant(type='int', value='0'))
 						new_statement=c_ast.BinaryOp(op='&&', left=c_ast.Assignment(op='=', lvalue=new_var_name, rvalue=parameter), right=new_statement)
 						#new_variable['_'+str(assert_count)+'_'+'PROVE']='Array'
 						if len(counter_variableMap_Conf.keys())>0:
-							new_variable['_'+str(assert_count)+'_'+'PROVE']=creatArrayDec('_'+str(assert_count)+'_'+'PROVE',counter_variableMap_Conf.keys())
+							new_variable['_'+str(assert_count)+'_'+'PROVE']=creatArrayDec('_'+str(assert_count)+'_'+'PROVE',array_size_variableMap.keys())
 						else:
 							new_variable['_'+str(assert_count)+'_'+'PROVE']='_'+str(assert_count)+'_'+'PROVE'
 				update_statements.append(new_statement)
@@ -17399,7 +17745,7 @@ def getPreDefinedFun(statements):
 						
 						new_statement= c_ast.Assignment(op='=', lvalue=new_var_name, rvalue=parameter)
                                                 if len(counter_variableMap_Conf.keys())>0:
-                                                    new_variable['_'+str(assume_count)+'_'+'ASSUME']=creatArrayDec('_'+str(assume_count)+'_'+'ASSUME',counter_variableMap_Conf.keys())
+                                                    new_variable['_'+str(assume_count)+'_'+'ASSUME']=creatArrayDec('_'+str(assume_count)+'_'+'ASSUME',array_size_variableMap.keys())
                                                 else:
                                                     new_variable['_'+str(assume_count)+'_'+'ASSUME']='_'+str(assume_count)+'_'+'ASSUME'
 					else:
@@ -17415,7 +17761,7 @@ def getPreDefinedFun(statements):
 						
 						new_statement=c_ast.BinaryOp(op='&&', left=c_ast.Assignment(op='=', lvalue=new_var_name, rvalue=parameter), right=new_statement)
                                                 if len(counter_variableMap_Conf.keys())>0:
-                                                    new_variable['_'+str(assume_count)+'_'+'ASSUME']=creatArrayDec('_'+str(assume_count)+'_'+'ASSUME',counter_variableMap_Conf.keys())
+                                                    new_variable['_'+str(assume_count)+'_'+'ASSUME']=creatArrayDec('_'+str(assume_count)+'_'+'ASSUME',array_size_variableMap.keys())
                                                 else:
                                                     new_variable['_'+str(assume_count)+'_'+'ASSUME']='_'+str(assume_count)+'_'+'ASSUME'
 				update_statements.append(new_statement)
@@ -17471,6 +17817,41 @@ def getCounterVariables(statement,variableMap):
                 getAllSubScripts(statement,variableMap,variableMap_Local)
 	return variableMap_Local
 
+
+#
+#Get Varible Constant from Condition
+#
+
+def getCounterVariablesConst(statement,variableMap):
+	if type(statement) is c_ast.UnaryOp:
+		if type(statement.expr) is c_ast.ID:
+			variableMap[statement.expr.name]=statement.expr.name
+	        else:
+                        getCounterVariablesConst(statement.expr,variableMap)    
+	elif type(statement) is c_ast.ID:
+		variableMap[statement.name]=statement.name
+        elif type(statement) is c_ast.Constant:
+                variableMap[statement.value]=statement.value
+	#elif type(statement) is c_ast.ArrayRef:
+	#	getCounterVariables(statement.expr,variableMap)
+	elif type(statement) is c_ast.BinaryOp:
+		if type(statement.left) is c_ast.ID:
+			variableMap[statement.left.name]=statement.left.name
+		else:
+			getCounterVariablesConst(statement.left,variableMap)
+		if type(statement.right) is c_ast.ID:
+			variableMap[statement.right.name]=statement.right.name
+		else:
+			getCounterVariablesConst(statement.right,variableMap)
+
+
+
+
+
+
+
+
+
 def getAllSubScripts(statement,variableMap,variableMap_Local):
     if type(statement.subscript) is c_ast.ID:
         variableMap[statement.subscript.name]=statement.name
@@ -17490,6 +17871,8 @@ def getCounterVariablesConf(statement,variableMap):
                         getCounterVariablesConf(statement.expr,variableMap)    
 	elif type(statement) is c_ast.ID:
 		variableMap[statement.name]=statement.name
+        #elif type(statement) is c_ast.Constant:
+        #        variableMap[statement.value]=statement.value
 	#elif type(statement) is c_ast.ArrayRef:
 	#	getCounterVariables(statement.expr,variableMap)
 	elif type(statement) is c_ast.BinaryOp:
@@ -17501,6 +17884,9 @@ def getCounterVariablesConf(statement,variableMap):
 			variableMap[statement.right.name]=statement.right.name
 		else:
 			getCounterVariablesConf(statement.right,variableMap)
+
+
+
 
 
 
@@ -17517,7 +17903,14 @@ def getConfirmationVariables(statements,variableMap,variableMap_Conf):
                 		getCounterVariablesConf(statement.rvalue,variableMapExp)
                 		if statement.lvalue.name in variableMapExp.keys():
                    			 variableMap_Conf[statement.lvalue.name]=statement.lvalue.name
+
+def getArraySizeVar(local_counter_varMap,counter_variableMap_Conf,array_size_variableMap):
+    for var in local_counter_varMap.keys():
+        if var in counter_variableMap_Conf.keys() and var in array_size_variableMap.keys():
+            #array_size_variableMap[var]=var
+            del array_size_variableMap[var]
                 
+
 
 
 
@@ -17540,8 +17933,10 @@ def creatArrayDec(name,parameterlist):
     for para in parameterlist:
         if str_parameterlist==None:
             str_parameterlist='['+para+']'
+            #str_parameterlist='['+']'
         else:
             str_parameterlist='['+para+']'+str_parameterlist
+            #str_parameterlist='['+']'+str_parameterlist
     if str_parameterlist is not None:
         function='int '+name+str_parameterlist
     else:
@@ -17898,11 +18293,16 @@ def getAssertAssume(f,o,a,cm):
 	new_f={}
 	assert_list=[]
 	assume_list=[]
+        key_value=None
+        assert_key_map={}
 	for x in f:
 		if x.find('_PROVE')<0 and x.find('_ASSUME')<0:
 			new_f[x]=f[x]
 	for x in o:
 		if x.find('_PROVE')>0:
+                        key_value=x
+                        if key_value is not None:
+                            assert_key_map[key_value]=o[x]
         		assert_list.append(o[x])
                 elif x.find('_ASSUME')>0:
         		assume_list.append(o[x])
@@ -17926,21 +18326,12 @@ def getAssertAssume(f,o,a,cm):
                                 new_e1[3]=expr_replace(new_e1[3],var_e1,var_array)
                                 new_e1[4]=expr_replace(new_e1[4],var_e1,var_array)
                                 new_e1[4]=simplify_ind_equation(new_e1[4],map_var.keys())
-                                #print '##########1'
-                                #print expr2string1(new_e1[3])
-                                #print '##########2'
+                                #print '##########'
                                 #print expr2string1(new_e1[4])
-                                #print '##########3'
+                                #print '##########'
                                 update_new_a.append(new_e1)
-                            #print '@@@@@@@@@@@@@@@'
-                            #print x[4]
                             x[4]=x[4][3]
                             x[4]=getEndElse(x[4])
-                            #print '@@@@@@@@@@@@@@@'
-                            #print x[4]
-                            #print '@@@@@@@@@@@@@@@'
-                            #print expr2string1(x[4])
-                            #print '@@@@@@@@@@@@@@@'
                             update_new_a.append(x)
                         else:
                             update_new_a.append(x)
@@ -17955,9 +18346,9 @@ def getAssertAssume(f,o,a,cm):
         	if x[0]=='i1':
         		if x[3][0].find('array')>0:
         			if '_PROVE' in expr2string1(x[4]):
-                                        #print '##########'
-                                        #print expr2string1(x[4])
-                                        #print '##########'
+
+                                        key_value=x[3][1][0]
+                                        
                                         #new_word,const_var=getPrimeAssert(a,cm,x[2],cm[x[2]])
                                         new_word,const_var=getPrimeAssert(update_new_a,cm,x[2],cm[x[2]])
 
@@ -17985,6 +18376,8 @@ def getAssertAssume(f,o,a,cm):
                                             #x[4][2]=new_stmt
                                             x[4]=new_stmt
         				assert_list.append(x)
+                                        if key_value is not None:
+                                            assert_key_map[key_value]=x
         				new_w = copy.deepcopy(new_x)
         				new_w[4]=copy.deepcopy(new_x[4][3])
                                         #new_w[4]=copy.deepcopy(x[4])
@@ -18039,12 +18432,9 @@ def getAssertAssume(f,o,a,cm):
         			new_a.append(x)
         	else:
 			new_a.append(x)
-      	        	
-        return new_f,new_o,new_a,extractAssert(assert_list,cm),extractAssume(assume_list,cm)
+      	 
+        return new_f,new_o,new_a,extractAssert(assert_list,cm),extractAssume(assume_list,cm),extractAssertMap(assert_key_map,cm)
         
-
-
-
 
 def getPrimeAssert(a,cm,var,constant):
     pime_eq=None
@@ -18107,7 +18497,50 @@ def extractAssert(assert_list,cm):
 					update_assert_stmts.append(stmt)
 			
 	return update_assert_stmts
-	
+    
+
+def extractAssertMap(assert_list_map,cm):
+	update_assert_stmts_map={}
+	for key_val in assert_list_map.keys():
+                stmt=assert_list_map[key_val]
+		if stmt[0]=='e':
+			update_stmt=[]
+			update_stmt.append('s0')
+			update_stmt.append(stmt[2])
+			key=wff2string1(update_stmt)
+			for iteam in cm:
+				key=key.replace(cm[iteam],iteam+'+1')
+			flag=False
+			for temp_stmt in assert_list_map.keys():
+				if temp_stmt[0]=='i1':
+					lefthandstmt=expr2string1(temp_stmt[3])
+					if 'and' not in str(key) and 'or' not in str(key):
+						if simplify(key)==simplify(lefthandstmt):
+							flag=True
+			if flag==False:
+				if update_stmt[0]=='s0':
+					temp=expr2string1(update_stmt[1])
+					if '_PROVE' not in temp:
+						if '<' in temp or '>' in temp or '=' in temp:
+							update_assert_stmts_map[key_val]=update_stmt
+				else:
+					update_assert_stmts_map[key_val]=update_stmt
+		else:
+			if stmt[0]=='s0':
+				temp=expr2string1(stmt[1])
+				if '<' in temp or '>' in temp or '=' in temp:
+					update_assert_stmts_map[key_val]=stmt
+			else:
+				if stmt[0]=='i1':
+					stmt_assert=[]
+					stmt_assert.append('c1')
+					#stmt_assert.append(stmt[4][2])
+                                        stmt_assert.append(stmt[4])
+					update_assert_stmts_map[key_val]=stmt_assert
+				else:
+					update_assert_stmts_map[key_val]=stmt	
+	return update_assert_stmts_map
+
 
 
 def extractAssume(assume_list,cm):
@@ -18178,6 +18611,8 @@ def assert_filter1(e):
                 new_stmt.append(new_cond1)
                 return new_stmt
 
+
+
 def getEndElse(e):
     if e[:1]==['ite']:
         arg_list=expr_args(e)
@@ -18188,9 +18623,6 @@ def getEndElse(e):
     else:
         return e
 
-
-
-            
 
 def getAll_PROVE_ASSUME(e,map_var):
     arg_list=expr_args(e)
@@ -18950,7 +19382,8 @@ def updateTypeDef(statement):
 			program_temp+=';'
 			array=statement.name
 			temp_ast = parser.parse(program_temp)
-    			return temp_ast.ext[0],pointer,array
+    			#return temp_ast.ext[0],pointer,array
+                        return statement,pointer,array
     		else:
     			type_stmt= statement.type.type.names[0]
     			if type_stmt in typedef_map.keys():
@@ -19237,6 +19670,10 @@ def change_var_name(statements):
 				update_statements.append(c_ast.While(cond=change_var_name_stmt(statement.cond),stmt=c_ast.Compound(block_items=statement.stmt.block_items)))	
 		elif type(statement) is c_ast.Assignment:
 			update_statements.append(c_ast.Assignment(op=statement.op,lvalue=change_var_name_stmt(statement.lvalue),rvalue=change_var_name_stmt(statement.rvalue)))
+                elif type(statement) is c_ast.Assignment:
+                    print statement.name
+                    statement.args.show()
+                    update_statements.append(statement)
 		else:
 			update_statements.append(statement)
 	return update_statements
@@ -19278,6 +19715,7 @@ def change_var_nameIf(statement):
 
 def change_var_name_stmt(statement):
 	if type(statement) is c_ast.BinaryOp:
+
 		if type(statement.left) is c_ast.ID:
 			if is_number(statement.left.name[-1])==True:
 				stmt_left=c_ast.ID(name=statement.left.name+'_var')
