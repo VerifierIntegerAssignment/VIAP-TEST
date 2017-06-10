@@ -11227,6 +11227,9 @@ def prove_auto(file_name):
         		o=o_map[key]
         		a=a_map[key]
         		cm=cm_map[key]
+
+                        #f,o,a=function_substitution_main(f,o,a,f_map,o_map,a_map)
+                        
         		assert_list=assert_map[key]
         		assume_list=assume_map[key]
         		addition_array=addition_array_map[key]
@@ -11254,7 +11257,6 @@ def prove_auto(file_name):
                 #print '#######'
                 #print program_analysis
                 #print '#######'
-                #return
                 end_time=current_milli_time()
                 print "Translation Time--"
 		print end_time-start_time
@@ -11279,6 +11281,80 @@ def prove_auto(file_name):
         else:
         	print 'Error in  Translation'
 
+
+
+def function_substitution_main(f,o,a,f_map,o_map,a_map):
+    new_a=[]
+    new_o={}
+    for x in o:
+        new_o[x]=o[x]
+    for x in a:
+        new_stmts=[]
+        if x[0]=='i1':
+            x[4]=function_substitution(x[4],f_map,o_map,a_map,new_stmts)
+            if len(new_stmts)>0:
+                for y in new_stmts:
+                    new_a.append(y)
+            new_a.append(x)
+        elif x[0]=='i0':
+            x[3]=function_substitution(x[3],f_map,o_map,a_map,new_stmts)
+            if len(new_stmts)>0:
+                for y in new_stmts:
+                    new_a.append(y)
+            new_a.append(x)
+        elif x[0]=='s0' or x[0]=='s1' :
+            x[1]=function_substitution(x[1],f_map,o_map,a_map,new_stmts)
+            if len(new_stmts)>0:
+                for y in new_stmts:
+                    new_a.append(y)
+            new_a.append(x)
+        else:
+            new_a.append(x)
+    return f,new_o,new_a
+
+def function_substitution(e,f_map,o_map,a_map,new_stmts):
+    args=expr_args(e)
+    op=expr_op(e)
+    if len(args)==0:
+        return e
+    else:
+         if e[:1]==['and'] or e[:1]==['or'] or e[:1]==['not'] or e[:1]==['ite'] or op in _infix_op or isArrayFunction(op)==True:
+            temp=[]
+            for x in expr_args(e):
+                parameter=function_substitution(x,f_map,o_map,a_map,new_stmts)
+                temp.append(parameter)
+            return e[:1]+temp
+         elif op in f_map.keys():
+            temp=[]
+            temp2=[]
+            sub_map={}
+            ret_stmt = o_map[op]['RET']
+            for x in expr_args(e):
+                parameter=function_substitution(x,f_map,o_map,a_map,new_stmts)
+                temp.append(parameter)
+            for x in expr_args(ret_stmt[1]):
+                parameter=function_substitution(x,f_map,o_map,a_map,new_stmts)
+                temp2.append(parameter)
+            if len(a_map[op])>0:
+                new_a=copy.deepcopy(a_map[op])
+                for x in range(0,len(temp2)):
+                    new_a=construct_a(temp2[x],temp[x],new_a)
+                for x in new_a:
+                    new_stmts.append(x)
+            new_stmt=copy.deepcopy(ret_stmt[2])
+            for x in range(0,len(temp2)):
+                new_stmt=expr_replace(new_stmt,temp2[x],temp[x])
+            return new_stmt
+         else:
+            return e[:1]+list(function_substitution(x,f_map,o_map,a_map,new_stmts) for x in expr_args(e))
+
+
+def construct_a(e1,e2,a):
+    new_a=[]
+    for x in a:
+        x=expr_replace(x,e1,e2)
+        new_a.append(x)
+    return new_a
 
 
 def organizeAxioms(f,o,a,vfacts):
@@ -19670,10 +19746,6 @@ def change_var_name(statements):
 				update_statements.append(c_ast.While(cond=change_var_name_stmt(statement.cond),stmt=c_ast.Compound(block_items=statement.stmt.block_items)))	
 		elif type(statement) is c_ast.Assignment:
 			update_statements.append(c_ast.Assignment(op=statement.op,lvalue=change_var_name_stmt(statement.lvalue),rvalue=change_var_name_stmt(statement.rvalue)))
-                elif type(statement) is c_ast.Assignment:
-                    print statement.name
-                    statement.args.show()
-                    update_statements.append(statement)
 		else:
 			update_statements.append(statement)
 	return update_statements
@@ -19753,7 +19825,16 @@ def change_var_name_stmt(statement):
 		elif statement.name in ['S','Q','N','in','is']:
 			return c_ast.ID(name=statement.name+'_var')
 		else:
-			return statement
+                        return statement
+        elif type(statement) is c_ast.FuncCall:
+            if statement.args is not None:
+                new_expr=[]
+                for exp in statement.args.exprs:
+                    new_expr.append(change_var_name_stmt(exp))
+                return c_ast.FuncCall(name=statement.name,args=c_ast.ExprList(exprs=new_expr))
+            else:
+                return statement
+	
 	else:
 		if type(statement) is c_ast.ArrayRef:
                     if checkingArrayName(statement)==True:
