@@ -1,3 +1,4 @@
+from sympy import *
 from ply import lex
 
 
@@ -299,11 +300,37 @@ class SLexer(object):
 
 	def t_UFLOAT(self,t):
     		#r'[-+]?\d*?[.]\d+'
-    		r'((\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
-    		t.value = float(t.value)
+    		r'(([-+]?\d+)(\.\d+)(e(\+|-)?(\d+))? | ([-+]?\d+)e(\+|-)?(\d+) | ([-+]?\d+)(\.))([lL]|[fF])?'
+    		if t.value[-1]=='f' or t.value[-1]=='F':
+                    t.value = float(t.value[:-1])
+                    if 'e' in str(t.value) or 'E' in str(t.value):
+                        t.value=str(t.value)
+                        if 'e' in t.value:
+                            expo=Integer(t.value[t.value.index('e')+1:len(t.value)])
+                        elif 'E' in t.value:
+                            expo=Integer(t.value[t.value.index('E')+1:len(t.value)])
+                        else:
+                            expo=200
+                        if expo>0:
+                            t.value = Float(t.value,expo+1)
+                        else:
+                            t.value = Float(t.value,-1*expo*5)
+                elif 'e' in t.value or 'E' in t.value:
+                    if 'e' in t.value:
+                        expo=Integer(t.value[t.value.index('e')+1:len(t.value)])
+                    elif 'E' in t.value:
+                        expo=Integer(t.value[t.value.index('E')+1:len(t.value)])
+                    else:
+                        expo=200
+                    if expo>0:
+                        t.value = Float(t.value,expo+1)
+                    else:
+                        t.value = Float(t.value,-1*expo*5)
+                else:
+                    t.value = Float(t.value,40)
     		return t
 	#t_UFLOAT.__doc__ = r'[-+]?\d*?[.]\d+'
-	t_UFLOAT.__doc__ = r'((\d+)(\.\d+)(e(\+|-)?(\d+))? | (\d+)e(\+|-)?(\d+))([lL]|[fF])?'
+	t_UFLOAT.__doc__ = r'(([-+]?\d*)(\.\d+)(e(\+|-)?(\d+))? | ([-+]?\d+)e(\+|-)?(\d+) | ([-+]?\d+)(\.))([lL]|[fF])?'
 	
 	def t_HEX(self,t):
     		r'0[xX][0-9a-fA-F]+'
@@ -385,6 +412,8 @@ class SLexer(object):
 		self.input(self.text)
 		self.program=[]
 		typedef_list=[]
+                
+                
 		while True:
 			tok = lex.token()
 			if not tok: break
@@ -407,7 +436,6 @@ class SLexer(object):
 				else:
 					self.program.append(tok)
 					
-		
 			
 		for item1 in typedef_list:
 			for item2 in typedef_list:
@@ -426,7 +454,6 @@ class SLexer(object):
 								item3_mod.append(item3)
 						item2.setTypevalue(item3_mod)
 
-							
 		#Create a subsitition Map
 		type_value_map={}
 		for item in typedef_list:
@@ -443,6 +470,7 @@ class SLexer(object):
 					program_mod.append(item1)
 			else:
 				program_mod.append(item)
+		
 		self.program=program_mod
 		return self.showProgram(self.program)
 	
@@ -506,6 +534,7 @@ class SLexer(object):
 						program_str=' '+str(tok.value)
 					else:
 						program_str+=' '+str(tok.value)
+
 		return program_str
 
 	def getStructUnion(self,lex):
