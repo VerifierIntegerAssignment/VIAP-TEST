@@ -11289,12 +11289,12 @@ def prove_auto(file_name):
         #print '--------------------------------'
         #print variables_list_map
         #print '--------------------------------'
-        #try:
-        f_map,o_map,a_map,cm_map,assert_map,assume_map,assert_key_map=translate1(programeIF,variables_list_map,1)
-        #except Exception as e:
-        #    print 'Error(Translation Failed)'
-        #    writeLogFile( "j2llogs.logs" ,str(e))
-        #    return
+        try:
+            f_map,o_map,a_map,cm_map,assert_map,assume_map,assert_key_map=translate1(programeIF,variables_list_map,1)
+        except Exception as e:
+            print 'Error(Translation Failed)'
+            writeLogFile( "j2llogs.logs" ,str(e))
+            return
 
         f_list=f_map.keys()
         cycle_list=[]
