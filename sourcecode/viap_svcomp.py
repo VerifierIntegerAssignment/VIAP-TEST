@@ -11279,11 +11279,10 @@ def prove_auto(file_name):
                         witnessXml=getWitness(filename,fname,resultfunction)
                         witnessXml_map[fname]= witnessXml
                         if program_analysis is not None:
-                            program_analysis=programPrint(membermethod.getFun_decl())+programPrint(module_analysis)+program_analysis
+                            program_analysis=programPrint(modifyDeclaration(membermethod.getFun_decl()))+programPrint(module_analysis)+program_analysis
         
         programeIF.append(programe_array)
         
-    
         #print '--------------------------------'
         #print programeIF
         #print '--------------------------------'
@@ -11369,12 +11368,13 @@ def prove_auto(file_name):
                 #                for term in results[result]:
                 #                    print term
                 #                assert_list.remove(assertion)
+                #return 
                 if len(f_list)==1 and 'main' in f_list:
                     axiommain=axiomeMap['main']
                     vfactsmain=axiommain.getVfact()
                     a=axiommain.getOther_axioms()
                     for fun in cycle_list:
-                        axiom=axiomeMap[key]
+                        axiom=axiomeMap[fun]
                         if axiom is not None:
                             f=axiom.getFrame_axioms()
                             o=axiom.getOutput_equations()
@@ -11596,7 +11596,9 @@ def function_substitution_Assert(e,f_map,o_map,a_map):
 
 
 
-
+def modifyDeclaration(fun_decl):
+    fun_decl.type.type.type.names[0]='void'
+    return fun_decl
 
 
 def construct_a(e1,e2,a):
@@ -11729,6 +11731,10 @@ def processOutput(outputs_list):
         if len(output_list)>1:
             elements = output_list.split('\n')
             if '_PROVE' in elements[0] and ':' in elements[0]:
+                element = elements[0].split(':')
+                if int(element[1])==0:
+                    map_asserts[elements[0]]=elements[1:]
+            elif '_FAILED' in elements[0] and ':' in elements[0]:
                 element = elements[0].split(':')
                 if int(element[1])==0:
                     map_asserts[elements[0]]=elements[1:]
@@ -13862,6 +13868,25 @@ def addPrintStmt(statements,localvariables,inputvariables):
                 arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
                 update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))
             
+            elif type(statement.lvalue) is c_ast.ID and '_FAILED' in statement.lvalue.name:
+                update_statements.append(statement)
+                nodes=[]
+                list_variables=[]
+                getAllNodesOfAssetion(statement.rvalue,nodes)
+                update_statements.append(createPrint(statement.lvalue,localvariables,inputvariables))
+                for node in nodes:
+                        if type(node) is c_ast.ID:
+                            list_variables.append(node.name)
+                        update_statements.append(createPrint(node,localvariables,inputvariables))
+                for var in localvariables.keys():
+                    varObject=localvariables[var]
+                    if varObject.getDimensions()==0 or varObject.getDimensions() is None:
+                        if varObject.getVariablename() not in list_variables and '_PROVE' not in varObject.getVariablename() and '_ASSUME' not in varObject.getVariablename() and '_FAILED' not in varObject.getVariablename():
+                            update_statements.append(createPrint(c_ast.ID(name=varObject.getVariablename()),localvariables,inputvariables))
+                arg_list=[]
+                arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
+                update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))            
+            
             
             elif type(statement.lvalue) is c_ast.ID and '_ASSUME' in statement.lvalue.name and type(statement.rvalue) is c_ast.BinaryOp:
                 update_statements.append(statement)
@@ -13889,11 +13914,31 @@ def addPrintStmt(statements,localvariables,inputvariables):
                     for var in localvariables.keys():
                         varObject=localvariables[var]
                         if varObject.getDimensions()==0 or varObject.getDimensions() is None:
-                            if varObject.getVariablename() not in list_variables and '_PROVE' not in varObject.getVariablename() and '_ASSUME' not in varObject.getVariablename():
+                            if varObject.getVariablename() not in list_variables and '_PROVE' not in varObject.getVariablename() and '_ASSUME' not in varObject.getVariablename() and '_FAILED' not in varObject.getVariablename():
                                 update_statements.append(createPrint(c_ast.ID(name=varObject.getVariablename()),localvariables,inputvariables))
                     arg_list=[]
                     arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
                     update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list)))
+                
+                elif type(statement.lvalue) is c_ast.ID and '_FAILED' in statement.lvalue.name:
+                    update_statements.append(statement)
+                    nodes=[]
+                    list_variables=[]
+                    getAllNodesOfAssetion(statement.rvalue,nodes)
+                    update_statements.append(createPrint(statement.lvalue,localvariables,inputvariables))
+                    for node in nodes:
+                            if type(node) is c_ast.ID:
+                                list_variables.append(node.name)
+                            update_statements.append(createPrint(node,localvariables,inputvariables))
+                    for var in localvariables.keys():
+                        varObject=localvariables[var]
+                        if varObject.getDimensions()==0 or varObject.getDimensions() is None:
+                            if varObject.getVariablename() not in list_variables and '_PROVE' not in varObject.getVariablename() and '_ASSUME' not in varObject.getVariablename() and '_FAILED' not in varObject.getVariablename():
+                                update_statements.append(createPrint(c_ast.ID(name=varObject.getVariablename()),localvariables,inputvariables))
+                    arg_list=[]
+                    arg_list.append(c_ast.Constant(type="string", value="\"--------\\n\""))
+                    update_statements.append(c_ast.FuncCall(name=c_ast.ID(name="printf"), args=c_ast.ExprList(exprs=arg_list))) 
+                
                 elif type(statement.lvalue) is c_ast.ArrayRef and '_ASSUME' in getArrayRef_Name(statement.lvalue):
                     update_statements.append(statement)
                     nodes=[]
@@ -14613,6 +14658,11 @@ def expressionCreator_C(statement):
 			        	parameter =expressionCreator_C(param)
 			        else:
                                 	parameter +=','+expressionCreator_C(param)
+                        elif type(param) is c_ast.FuncCall:
+				if parameter=='':
+			        	parameter =expressionCreator_C(param)
+			        else:
+                                	parameter +=','+expressionCreator_C(param)
 			else:
 				if type(statement) is c_ast.ArrayRef:
 					parameter_list.append('int')
@@ -14631,7 +14681,6 @@ def expressionCreator_C(statement):
 		defineDetailtemp.append(parameter_list)
 		defineDetaillist.append(defineDetailtemp)
 	
-		
 		return "['"+statement.name.name+"',"+parameter+"]"
 	else:
 		if '__VERIFIER_nondet_' not in statement.name.name:
