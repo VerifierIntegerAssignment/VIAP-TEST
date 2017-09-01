@@ -13356,7 +13356,7 @@ def prove_auto(file_name):
         programgraph_map=construct_graph(f_map,o_map,a_map,f_list)
         programgraph = graphclass.Graph(programgraph_map)
         
-        print programgraph
+
         
         if programgraph.cyclic():
             cycle_list=list(itertools.chain.from_iterable(programgraph.getAllNodesInCycle()))
@@ -13364,18 +13364,25 @@ def prove_auto(file_name):
 
         f_list=removeCycles(f_list,cycle_list)
         
-        print cycle_list
-        
-        print f_list
+
         
         for f_x in cycle_list:
             for x in o_map[f_x]:
                 if o_map[f_x][x][0]=='e':
                     o_map[f_x][x][2] = reconstructRecurences(o_map[f_x][x][2],cycle_list)
+                    
+        for f_x in cycle_list:
+            if f_x in fun_call_map.keys() and fun_call_map[f_x]==1:
+                for x in o_map['main']:
+                    if o_map['main'][x][0]=='e':
+                        o_map['main'][x][2] = reconstructRecurences(o_map['main'][x][2],cycle_list)
         
+
         
         function_substitution_test('main',programgraph_map,f_map,o_map,a_map,cycle_list)
         
+        
+       
         #print '$$$$$$$$$$$$$$$$$$$$'
         
         #print cycle_list
@@ -14244,6 +14251,23 @@ def reconstructRecurences(e,f_list):
             return eval("['"+fun_name+"']")+list(reconstructRecurences(x,f_list) for x in expr_args(e))
         else:
             return e[:1]+list(reconstructRecurences(x,f_list) for x in expr_args(e))
+    else:
+        return e
+    
+    
+def reconstructRecurences2(e,f_list,f_name):
+    op=expr_op(e)
+    args=expr_args(e)
+    fun_name=None
+    if len(args)>0:
+        if e[:1]==['and'] or e[:1]==['or'] or e[:1]==['not'] or e[:1]==['ite'] or op in _infix_op or isArrayFunction(op)==True:
+            fun_name=None
+        else:
+            fun_name=fun_matching(op)
+        if fun_name is not None and fun_name in f_list and f_name==fun_name:
+            return eval("['"+fun_name+"']")+list(reconstructRecurences2(x,f_list) for x in expr_args(e))
+        else:
+            return e[:1]+list(reconstructRecurences2(x,f_list) for x in expr_args(e))
     else:
         return e
 
