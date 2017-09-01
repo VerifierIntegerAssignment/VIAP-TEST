@@ -23,9 +23,12 @@ class typedefclass(object):
         	self.typevalue=typevalue
 
 
+
 class SLexerError(Exception): pass
 
 class SLexer(object):
+        
+        
 
 	primitive_types = {
     	'float': 'FLOAT',
@@ -189,6 +192,7 @@ class SLexer(object):
     	'RQUOTE',
     	'USTRING',
     	'UFLOAT',
+        'UCHAR',
     	'EQUAL',
     	'NEQUAL',
     	'OR',
@@ -327,7 +331,7 @@ class SLexer(object):
                     else:
                         t.value = Float(t.value,-1*expo*5)
                 else:
-                    t.value = Float(t.value,40)
+                    t.value = Float(t.value)
     		return t
 	#t_UFLOAT.__doc__ = r'[-+]?\d*?[.]\d+'
 	t_UFLOAT.__doc__ = r'(([-+]?\d*)(\.\d+)(e(\+|-)?(\d+))? | ([-+]?\d+)e(\+|-)?(\d+) | ([-+]?\d+)(\.))([lL]|[fF])?'
@@ -340,10 +344,26 @@ class SLexer(object):
 	t_HEX.__doc__ = r'0[xX][0-9a-fA-F]+'
 
 	def t_INTEGER(self,t):
-    		r'[-+]?\d+'
-    		t.value = int(t.value)
+    		r'([-+]?\d+)([U])?'
+                if 'U' not in t.value:
+                    t.value = int(t.value)
     		return t
-	t_INTEGER.__doc__ = r'[-+]?\d+'
+	t_INTEGER.__doc__ = r'([-+]?\d+)([U])?'
+
+
+	def t_UCHAR(self,t):
+                t.type = 'UCHAR'
+                t.value = t.value
+    		return t
+	
+	simple_escape = r"""([a-zA-Z._~!=&\^\-\\?'"])"""
+        decimal_escape = r"""(\d+)"""
+        hex_escape = r"""(x[0-9a-fA-F]+)"""
+        escape_sequence = r"""(\\("""+simple_escape+'|'+decimal_escape+'|'+hex_escape+'))'
+        cconst_char = r"""([^'\\\n]|"""+escape_sequence+')'
+        char_const = "'"+cconst_char+"'"
+	t_UCHAR.__doc__ = char_const
+
 
 	def t_COMMENT(self,t):
     		r'(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|(//.*)'
@@ -366,6 +386,8 @@ class SLexer(object):
 	def __init__(self,text):
 	        self.program = []
         	self.text=text
+                self.struct_list=[]
+                self.type_struct_list=[]
 
     	def build(self, **kwargs):
         	""" Builds the lexer from the specification. Must be
@@ -412,8 +434,7 @@ class SLexer(object):
 		self.input(self.text)
 		self.program=[]
 		typedef_list=[]
-                
-                
+
 		while True:
 			tok = lex.token()
 			if not tok: break
@@ -430,9 +451,27 @@ class SLexer(object):
 					else:
 						self.getExterns(lex)
 				elif tok.type=='TYPEDEF':
-					typedef_list.append(self.getTypeDef(lex))
+                                        term_type=self.getTypeDef(lex)
+                                        temp_struct=[]
+                                        if term_type is not None and type(term_type.getTypevalue()) is list and type(term_type.getTypename()) is list:
+                                            for x in term_type.getTypevalue():
+                                                temp_struct.append(x)
+                                            if type(term_type.getTypename()) is list:
+                                                for x in term_type.getTypename():
+                                                    temp_struct.append(x)
+                                                str_struct=self.showProgram(temp_struct)
+                                                if 'struct' in str_struct or 'union' in str_struct:
+                                                    self.type_struct_list.append("typedef "+str_struct+";")
+					typedef_list.append(term_type)
 				elif tok.type=='STRUCT' or tok.type=='UNION':
-					self.getStructUnionIgn(tok,lex)
+                                        list_struct=self.getStructUnionIgn(tok,lex)
+                                        str_struct2=self.showProgram(list_struct)
+                                        if '{' in str_struct2 and '}' in str_struct2:
+                                            self.struct_list.append(str_struct2)
+                                        else:
+                                            for x_x in list_struct:
+                                                self.program.append(x_x)
+
 				else:
 					self.program.append(tok)
 					
@@ -454,6 +493,7 @@ class SLexer(object):
 								item3_mod.append(item3)
 						item2.setTypevalue(item3_mod)
 
+		
 		#Create a subsitition Map
 		type_value_map={}
 		for item in typedef_list:
@@ -463,6 +503,8 @@ class SLexer(object):
 				if item.getTypevalue()[1] is not None and item.getTypevalue()[1].type=='ID':
 					type_value_map[item.getTypename()[-1].value]=item.getTypevalue()
 					
+		
+		
 		program_mod=[]
 		for item in self.program:
 			if item.type=='ID' and item.value in type_value_map.keys():
@@ -472,7 +514,8 @@ class SLexer(object):
 				program_mod.append(item)
 		
 		self.program=program_mod
-		return self.showProgram(self.program)
+                
+		return self.showProgram(self.program),self.struct_list,self.type_struct_list
 	
 	
 	def getTypeDef(self,lex):
@@ -537,6 +580,8 @@ class SLexer(object):
 
 		return program_str
 
+
+
 	def getStructUnion(self,lex):
 		nameStack=[]
 		list_token=[]
@@ -561,16 +606,16 @@ class SLexer(object):
 			list_token.append(tok)
 			if tok.type=='LCURLY':
 				nameStack.append(tok)
-				list_token.append(tok)
+				#list_token.append(tok)
 			elif tok.type=='RCURLY':
 				nameStack.pop()
-				list_token.append(tok)
+				#list_token.append(tok)
 			elif tok.type=='SEMICOLON':
 				if not nameStack: 
-					list_token.append(tok)
+					#list_token.append(tok)
 					return list_token
-				else: 
-					list_token.append(tok)
+				#else: 
+					#list_token.append(tok)
 		return list_token
 	
 	def createCommonEquation(self,variable_const_map,counter):
