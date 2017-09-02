@@ -11549,7 +11549,14 @@ def tactic1_update(f,o,a,pre_condition,conclusions,vfact,inputmap,constaints,wit
 	for x in a: 
         	equations=wff2z3_update(x)
         	equations_sp=None
-                constraint_list.append(equations)
+                if x[0]=='s0':
+                    if 'Implies' not in equations and 'If' not in equations and 'And' not in  equations and 'Or' not in  equations and 'Not' not in  equations and 'ForAll' and 'Exists' not in  equations and 'Implies' not in equations:
+                        if simplify(equations)!=False:
+                            constraint_list.append(equations)
+                    else:
+                        constraint_list.append(equations)
+                else:
+                    constraint_list.append(equations)
                 if x[0]=='s1':
         		equations_sp=wff2z3SC_update(x)
         		if equations_sp is not None:
@@ -13457,9 +13464,10 @@ def prove_auto(file_name):
                 #print '$$$$$$$$$$$$$$$$$'
                 #results={}
                 if results is None:
-                    print 'Result--'
-                    print 'Program Terminates Failed'
-                    return
+                    #print 'Result--'
+                    #print 'Program Terminates Failed'
+                    #return
+                    results={}
                 for fun in assert_key_map.keys():
                     assert_key_list = assert_key_map[fun]
                     assert_list=axiomeMap[fun].getAsserts()
@@ -14299,6 +14307,7 @@ def AssetionAnalysis(program_analysis,program_analysis_decl):
             #proc = subprocess.Popen('./input_program', stdout=subprocess.PIPE,shell=True)
             #output = proc.stdout.read()
             #output, err = proc.communicate()
+            #print '##################---------------'
             command = commandclass.Command("./input_program")
             output = command.run(timeout=120)
             status=output
@@ -24513,7 +24522,7 @@ def change_var_name(statements):
                             if type(statement.type) is not c_ast.PtrDecl:
 				if is_number(statement.type.declname[-1])==True:
 					statement=c_ast.Decl(name=statement.name+'_var', quals=statement.quals, storage=statement.storage, funcspec=statement.funcspec, type=c_ast.TypeDecl(declname=statement.type.declname+'_var', quals=statement.type.quals, type=statement.type.type), init=statement.init, bitsize=statement.bitsize)
-				elif statement.type.declname in ['S','Q','N','in','is']:
+				elif statement.type.declname in ['S','Q','N','in','is','limit']:
 					statement=c_ast.Decl(name=statement.name+'_var', quals=statement.quals, storage=statement.storage, funcspec=statement.funcspec, type=c_ast.TypeDecl(declname=statement.type.declname+'_var', quals=statement.type.quals, type=statement.type.type), init=statement.init, bitsize=statement.bitsize)
 			update_statements.append(statement)
 		elif type(statement) is c_ast.If:
@@ -24581,7 +24590,7 @@ def change_var_name_stmt(statement):
 		if type(statement.left) is c_ast.ID:
 			if is_number(statement.left.name[-1])==True:
 				stmt_left=c_ast.ID(name=statement.left.name+'_var')
-			elif statement.left.name in ['S','Q','N','in','is']:
+			elif statement.left.name in ['S','Q','N','in','is','limit']:
 				stmt_left=c_ast.ID(name=statement.left.name+'_var')
 			else:
 				stmt_left=change_var_name_stmt(statement.left)
@@ -24591,7 +24600,7 @@ def change_var_name_stmt(statement):
 		if type(statement.right) is c_ast.ID:
 			if is_number(statement.right.name[-1])==True:
 				stmt_right=c_ast.ID(name=statement.right.name+'_var')
-			elif statement.right.name in ['S','Q','N','in','is']:
+			elif statement.right.name in ['S','Q','N','in','is','limit']:
 				stmt_right=c_ast.ID(name=statement.right.name+'_var')
 			else:
 				stmt_right=change_var_name_stmt(statement.right)
@@ -24602,7 +24611,7 @@ def change_var_name_stmt(statement):
 		if type(statement.expr) is c_ast.ID:
 			if is_number(statement.expr.name[-1])==True:
 				stmt=c_ast.ID(name=statement.expr.name+'_var')
-			elif statement.expr.name in ['S','Q','N','in','is']:
+			elif statement.expr.name in ['S','Q','N','in','is','limit']:
 				stmt=c_ast.ID(name=statement.expr.name+'_var')
 			else:
 				stmt=change_var_name_stmt(statement.expr)
@@ -24612,7 +24621,7 @@ def change_var_name_stmt(statement):
 	elif type(statement) is c_ast.ID:
 		if is_number(statement.name[-1])==True:
 			return c_ast.ID(name=statement.name+'_var')
-		elif statement.name in ['S','Q','N','in','is']:
+		elif statement.name in ['S','Q','N','in','is','limit']:
 			return c_ast.ID(name=statement.name+'_var')
 		else:
                         return statement
@@ -24642,7 +24651,7 @@ def change_var_name_decl(statement):
             if is_number(statement.name[-1])==True:
                 statement.name=statement.name+'_var'
                 renameArrayName(statement.type)
-            elif statement.name in ['S','Q','N','in','is']:
+            elif statement.name in ['S','Q','N','in','is','limit']:
                 statement.name=statement.name+'_var'
                 renameArrayName(statement.type)
             else:
@@ -24651,7 +24660,7 @@ def change_var_name_decl(statement):
             if is_number(statement.type.declname[-1])==True:
                 statement.name=statement.name+'_var' 
                 statement.type=c_ast.TypeDecl(declname=statement.type.declname+'_var', quals=statement.type.quals, type=statement.type.type)
-            elif statement.type.declname in ['S','Q','N','in','is']:
+            elif statement.type.declname in ['S','Q','N','in','is','limit']:
                 statement.name=statement.name+'_var'  
                 statement.type=c_ast.TypeDecl(declname=statement.type.declname+'_var', quals=statement.type.quals, type=statement.type.type)
         return statement
