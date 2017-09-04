@@ -12281,11 +12281,14 @@ def programTransformation(function_body,functionMap,medthodname):
         
     statements=syntaxTranslate(statements)
 
-
-    statements=arrangeEmptyStatement(statements)
     #print '#######1'
     #print(generator.visit(c_ast.Compound(block_items=statements)))
     #print '#######1'
+
+    statements=arrangeEmptyStatement(statements)
+    #print '#######11'
+    #print(generator.visit(c_ast.Compound(block_items=statements)))
+    #print '#######11'
    
     #Convert Initiation to assignments   
     
@@ -12975,6 +12978,8 @@ def prove_auto(file_name):
 	
     	counter=0 
         
+
+        
     	for e in ast.ext:
     		if type(e) is c_ast.Decl:
     			if type(e.type) is c_ast.FuncDecl:
@@ -13385,7 +13390,7 @@ def prove_auto(file_name):
                         o_map['main'][x][2] = reconstructRecurences(o_map['main'][x][2],cycle_list)
         
 
-        
+
         function_substitution_test('main',programgraph_map,f_map,o_map,a_map,cycle_list)
         
         
@@ -24570,7 +24575,7 @@ def change_var_nameIf(statement):
        
        
         if type(statement.iffalse) is c_ast.Assignment:
-		new_iftrue=c_ast.Assignment(op=statement.iffalse.op,lvalue=change_var_name_stmt(statement.iffalse.lvalue),rvalue=change_var_name_stmt(statement.iffalse.rvalue))
+		new_iffalse=c_ast.Assignment(op=statement.iffalse.op,lvalue=change_var_name_stmt(statement.iffalse.lvalue),rvalue=change_var_name_stmt(statement.iffalse.rvalue))
 	elif type(statement.iffalse) is c_ast.Compound:
 		if statement.iffalse.block_items is not None:
 	        	new_block_items=change_var_name(statement.iffalse.block_items)
